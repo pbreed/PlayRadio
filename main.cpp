@@ -4,7 +4,7 @@
 #include <startnet.h>
 #include <autoupdate.h>
 #include <dhcpclient.h>
-#include <smarttrap.h>
+#include <smarttrap.h>  //Comment
 #include <taskmon.h>
 #include <sim.h>
 #include <cfinter.h>
