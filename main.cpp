@@ -462,10 +462,23 @@ static int nRequests,nResponses,nFails;
 
 void TcpWebTask(void * p)
 {
-
+int rv_Fat;
 f_enterFS(); 
-InitExtFlash();  // Initialize the CFC or SD/MMC external flash drive
-	
+
+//do
+{
+rv_Fat=InitExtFlash();  // Initialize the CFC or SD/MMC external flash drive
+
+iprintf("Attempting to mount FAT drive %d\r\n",rv_Fat);
+if(rv_Fat!=0)
+	{
+	rv_Fat=InitExtFlash();  // Initialize the CFC or SD/MMC external flash drive
+	iprintf("Attempting to mount FAT drive %d\r\n",rv_Fat);
+	}
+
+}
+//while(rv_Fat!=0);
+
 DWORD result=ReadFile( ScratchBuffer,(const char *)"config.txt",SCRATCHSIZE );
 
 if(result>0)
@@ -539,27 +552,34 @@ while(1)
  {
 	 LedState=LED_NO_SERVER_CONNECT;
  	 ip=0;
+	 if(bLog) iprintf("Connect failed\r\n");
   }
  else
  {
   
+ if(bLog) iprintf("Connected\r\n");
+ else
   LastConTime=TimeTick;
   writestring(fd,tRequest);
   int nread=0;
   while(1)
   {
-   int rv=ReadWithTimeout(fd,tResponse+nread,RESPONSE_SIZE-nread,REQUEST_TIMEOUT.tval());
-if(bLog)   iprintf("Read at %ld\r\n",TimeTick-LastStartTime);
-   if(rv>0) 
+    int rv=ReadWithTimeout(fd,tResponse+nread,RESPONSE_SIZE-nread,REQUEST_TIMEOUT.tval());
+   if(bLog)   iprintf("Read at %ld\r\n",TimeTick-LastStartTime);
+    if(rv>0) 
 	   {nread+=rv;
 	   if(nread>=(RESPONSE_SIZE-1)) break;
 	   tResponse[nread]=0;
        }
     else
+	{
+	if(bLog) iprintf("read result %d\r\n",rv);
 	break;
+	}
   };
 
   LastReadDoneTime=TimeTick;
+  if(bLog) iprintf("Read %d bytes\r\n",nread);
 
  if(nread)
  {
@@ -571,6 +591,7 @@ if(bLog)   iprintf("Read at %ld\r\n",TimeTick-LastStartTime);
 	 FindResult+=4;
 	 if(FindResult[0])
 	  {
+		
 		char * p=FindResult;
 		while (*p) p++;
 		*p++='.';
@@ -578,7 +599,7 @@ if(bLog)   iprintf("Read at %ld\r\n",TimeTick-LastStartTime);
 		*p++='a';
 		*p++='v';
 		*p++=0;
-       //iprintf("Looking for file %s\r\n",FindResult);
+       if(bLog) iprintf("Looking for file %s\r\n",FindResult);
 
 		nResponses++;
       DWORD result=ReadFile( ScratchBuffer,FindResult,SCRATCHSIZE );
@@ -621,7 +642,7 @@ if(bLog)   iprintf("Read at %ld\r\n",TimeTick-LastStartTime);
 		 }
 		 else
 		 {
-			iprintf("The server had nothing for me %d requests %d actions %d find failures)\r\n",nRequests,nResponses,nFails);
+			iprintf("The server had nothing for me %d requests %d actions %d find failures Took %d seconds)\r\n",nRequests,nResponses,nFails,(LastReadDoneTime-LastConTime)/20);
 		 }
 /*      	 if(nread>20)
 		 {
